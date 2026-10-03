@@ -123,19 +123,8 @@
   </div>
 
   <div class="card">
-    <h2>Board lights</h2>
-    <div class="grid g4" id="lights"></div>
-  </div>
-
-  <div class="card">
     <h2>Horn sound</h2>
     <div class="grid g3" id="sounds"></div>
-  </div>
-
-  <div class="card">
-    <h2>Direction lights</h2>
-    <div class="grid g3" id="dirs"></div>
-    <p class="note">Changing any other setting turns these off, same as the original app.</p>
   </div>
 
   <div class="card">
@@ -161,18 +150,7 @@
   const CHAR_NOTIFY = '0000ff02-0000-1000-8000-00805f9b34fb';
   const NAME_PREFIX = 'BLE Device-';
 
-  const LIGHTS = [
-    { name: 'Off', color: null },
-    { name: 'Red', color: '#ff0000' },
-    { name: 'Green', color: '#00ff00' },
-    { name: 'Yellow', color: '#ffff00' },
-    { name: 'Blue', color: '#0000ff' },
-    { name: 'Magenta', color: '#ff00ff' },
-    { name: 'Cyan', color: '#00ffff' },
-    { name: 'White', color: '#ffffff' },
-  ];
   const SOUNDS = ['Bicycle bell', 'Bike horn', 'Ring bell', 'Car horn', 'Cartoon horn', 'Horn', 'Jingle bell', 'Squeaky toy', 'Car horn 2'];
-  const DIRS = ['Off', 'Left', 'Left top', 'Forward', 'Right top', 'Right', 'Back'];
   const KM_TO_MI = 0.621371;
 
   // ---------- saved state ----------
@@ -198,8 +176,8 @@
     const p = new Uint8Array(20);
     p[0] = 0xAA; p[1] = 0x55; p[2] = 0x03; p[3] = 0x00;
     p[4] = state.sound & 0xff;
-    p[5] = state.light & 0xff;
-    p[6] = state.light & 0xff;
+    p[5] = 0;   // light zone (Travel board only; Racer ignores)
+    p[6] = 0;
     p[7] = Math.round(state.accel / 2) & 0xff;   // app sends slider % divided by 2
     p[8] = direction & 0xff;
     p[16] = 0x85; p[17] = 0x14; p[18] = 0x00; p[19] = 0xFE;
@@ -345,15 +323,6 @@
     $('presets').appendChild(b);
   });
 
-  // lights
-  LIGHTS.forEach((l, i) => {
-    const b = document.createElement('button');
-    b.className = 'swatch';
-    b.innerHTML = (l.color ? `<i style="background:${l.color}"></i>` : '') + l.name;
-    b.onclick = () => { state.light = i; save(); selectIn($('lights'), i); send(); };
-    $('lights').appendChild(b);
-  });
-
   // sounds
   SOUNDS.forEach((s, i) => {
     const b = document.createElement('button');
@@ -363,15 +332,7 @@
     $('sounds').appendChild(b);
   });
 
-  // directions (not saved; any other write resets to 0 like the original app)
-  DIRS.forEach((d, i) => {
-    const b = document.createElement('button');
-    b.textContent = d;
-    b.onclick = () => { selectIn($('dirs'), i); send(i); };
-    $('dirs').appendChild(b);
-  });
-
-  $('syncBtn').onclick = () => { send(); selectIn($('dirs'), 0); };
+  $('syncBtn').onclick = () => send();
   $('connectBtn').onclick = () => {
     if (device && device.gatt.connected) device.gatt.disconnect();
     else connect();
@@ -380,16 +341,11 @@
   // init
   renderUnits();
   renderAccel();
-  selectIn($('lights'), state.light);
   selectIn($('sounds'), state.sound);
   if (!navigator.bluetooth) {
     $('unsupported').style.display = 'block';
     $('connectBtn').disabled = true;
   }
-  // Any non-direction write clears the direction highlight
-  document.querySelectorAll('#lights button, #sounds button, #presets button').forEach(b =>
-    b.addEventListener('click', () => selectIn($('dirs'), 0)));
-  slider.addEventListener('change', () => selectIn($('dirs'), 0));
 })();
 </script>
 </body>

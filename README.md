@@ -14,10 +14,11 @@ Turn the board on, tap **Connect to board**, and pick the device named `BLE Devi
 
 ## What it does
 
+Built for the Huger Racer. The light commands from the old app only affected the Travel board's under deck lights, so they are left out. Headlights are controlled by double pressing the remote's power button.
+
+
 - Torque from 0 to 100% (controls both acceleration and braking strength), with 5 presets (hold a preset to save the slider value to it)
-- Board light color (off plus 7 colors)
 - Horn sound (9 choices)
-- Direction lights
 - Live speed, battery, trip, odometer, and top speed
 
 The board never reports its current settings, so the page remembers them in the browser. Use **Send all saved settings to board** if they get out of sync.
