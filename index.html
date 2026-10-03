@@ -155,9 +155,10 @@
 <script>
 (() => {
   // Protocol from the original Huger Tech Android app (com.idt.escooter 1.1.0)
-  const SERVICE = 0xff12;
-  const CHAR_WRITE = 0xff01;
-  const CHAR_NOTIFY = 0xff02;
+  // Full UUID strings: some browsers (Bluefy) reject the short number form
+  const SERVICE = '0000ff12-0000-1000-8000-00805f9b34fb';
+  const CHAR_WRITE = '0000ff01-0000-1000-8000-00805f9b34fb';
+  const CHAR_NOTIFY = '0000ff02-0000-1000-8000-00805f9b34fb';
   const NAME_PREFIX = 'BLE Device-';
 
   const LIGHTS = [
@@ -232,10 +233,19 @@
   async function connect() {
     try {
       setStatus('Choose your board...', 'busy');
-      device = await navigator.bluetooth.requestDevice({
-        filters: [{ namePrefix: NAME_PREFIX }, { services: [SERVICE] }],
-        optionalServices: [SERVICE],
-      });
+      try {
+        device = await navigator.bluetooth.requestDevice({
+          filters: [{ namePrefix: NAME_PREFIX }],
+          optionalServices: [SERVICE],
+        });
+      } catch (e) {
+        if (e.name === 'NotFoundError' && /cancel/i.test(e.message)) throw e;
+        log('Filtered scan failed (' + e.name + ': ' + e.message + '), showing all devices');
+        device = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [SERVICE],
+        });
+      }
       device.addEventListener('gattserverdisconnected', onDisconnect);
       setStatus('Connecting...', 'busy');
       const server = await device.gatt.connect();
@@ -249,7 +259,7 @@
       log('Connected to ' + (device.name || device.id));
     } catch (e) {
       log('Connect failed: ' + e.message);
-      setStatus(e.name === 'NotFoundError' ? 'Not connected' : 'Connect failed', '');
+      setStatus(e.name === 'NotFoundError' && /cancel/i.test(e.message) ? 'Not connected' : 'Failed: ' + e.name + ': ' + e.message, '');
       writeChar = null;
     }
   }
