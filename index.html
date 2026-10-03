@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1116">
+<title>HT Board</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --card: #171b22;
+    --card2: #1f252e;
+    --line: #2a313c;
+    --text: #e8ecf1;
+    --muted: #8a94a3;
+    --accent: #3ddc84;
+    --accent-ink: #062b16;
+    --warn: #ffb020;
+    --bad: #ff5d5d;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+    max-width: 560px; margin: 0 auto;
+  }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: .5px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+  .status { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--bad); }
+  .dot.on { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .dot.busy { background: var(--warn); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 14px; }
+  button {
+    font: inherit; color: var(--text); background: var(--card2); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; cursor: pointer; min-height: 44px;
+  }
+  button:active { transform: scale(.98); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; width: 100%; }
+  button.sel { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  .grid { display: grid; gap: 8px; }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat { background: var(--card2); border-radius: 10px; padding: 12px; }
+  .stat .v { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .u { font-size: 13px; color: var(--muted); margin-left: 4px; }
+  .stat .l { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .stat.big { grid-column: span 2; text-align: center; }
+  .stat.big .v { font-size: 56px; }
+  .batt { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+  .batt > div { height: 100%; width: 0; background: var(--accent); transition: width .4s; }
+  input[type=range] { width: 100%; accent-color: var(--accent); height: 32px; }
+  .accel-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .accel-val { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .preset { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; }
+  .preset small { color: var(--muted); font-size: 12px; }
+  .swatch { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 10px 4px; }
+  .swatch i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; border: 1px solid #0005; }
+  .note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+  .warn { background: #2a2110; border: 1px solid #5a4614; color: #ffd27a; border-radius: 10px; padding: 12px; font-size: 14px; margin-bottom: 14px; display: none; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+  #log { font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: #9fb3c8; background: #0a0d11; border-radius: 8px; padding: 10px; max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin-top: 10px; }
+  .unit-toggle { display: flex; gap: 6px; }
+  .unit-toggle button { padding: 6px 10px; min-height: 32px; font-size: 13px; }
+  .locked { opacity: .45; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>HT Board</h1>
+    <div class="status"><span id="dot" class="dot"></span><span id="statusText">Not connected</span></div>
+  </div>
+  <div class="unit-toggle">
+    <button id="unitMph">mph</button>
+    <button id="unitKm">km</button>
+  </div>
+</header>
+
+<div id="unsupported" class="warn">
+  This browser can't use Bluetooth. Use Chrome on Android or a computer. On iPhone, install the free <b>Bluefy</b> browser and open this page in it.
+</div>
+
+<div class="card">
+  <button id="connectBtn" class="primary">Connect to board</button>
+  <p class="note">Turn the board on first. It shows up as "BLE Device" followed by numbers.</p>
+</div>
+
+<div id="controls" class="locked">
+
+  <div class="card">
+    <h2>Ride data</h2>
+    <div class="stats">
+      <div class="stat big"><div class="l">Speed</div><span class="v" id="speed">0.0</span><span class="u unitSpeed">mph</span></div>
+      <div class="stat">
+        <div class="l">Battery</div><span class="v" id="battery">--</span><span class="u">%</span>
+        <div class="batt"><div id="battBar"></div></div>
+      </div>
+      <div class="stat"><div class="l">Trip</div><span class="v" id="trip">0.0</span><span class="u unitDist">mi</span></div>
+      <div class="stat"><div class="l">Odometer</div><span class="v" id="odo">0.0</span><span class="u unitDist">mi</span></div>
+      <div class="stat"><div class="l">Top speed</div><span class="v" id="top">0.0</span><span class="u unitSpeed">mph</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Acceleration</h2>
+    <div class="accel-head">
+      <span class="accel-val"><span id="accelVal">0</span>%</span>
+      <span class="note" style="margin:0">Higher is more punch</span>
+    </div>
+    <input type="range" id="accel" min="0" max="100" step="1" value="0">
+    <div class="grid g4" id="presets" style="grid-template-columns:repeat(5,1fr);margin-top:10px"></div>
+    <p class="note">Tap a preset to use it. Hold a preset for a second to save the current slider value to it.</p>
+  </div>
+
+  <div class="card">
+    <h2>Board lights</h2>
+    <div class="grid g4" id="lights"></div>
+  </div>
+
+  <div class="card">
+    <h2>Horn sound</h2>
+    <div class="grid g3" id="sounds"></div>
+  </div>
+
+  <div class="card">
+    <h2>Direction lights</h2>
+    <div class="grid g3" id="dirs"></div>
+    <p class="note">Changing any other setting turns these off, same as the original app.</p>
+  </div>
+
+  <div class="card">
+    <button id="syncBtn" style="width:100%">Send all saved settings to board</button>
+    <p class="note">The board doesn't report its settings, so this page remembers them. Use this if the board and page don't match.</p>
+  </div>
+
+</div>
+
+<div class="card">
+  <details>
+    <summary>Bluetooth log</summary>
+    <div id="log"></div>
+  </details>
+</div>
+
+<script>
+(() => {
+  // Protocol from the original Huger Tech Android app (com.idt.escooter 1.1.0)
+  const SERVICE = 0xff12;
+  const CHAR_WRITE = 0xff01;
+  const CHAR_NOTIFY = 0xff02;
+  const NAME_PREFIX = 'BLE Device-';
+
+  const LIGHTS = [
+    { name: 'Off', color: null },
+    { name: 'Red', color: '#ff0000' },
+    { name: 'Green', color: '#00ff00' },
+    { name: 'Yellow', color: '#ffff00' },
+    { name: 'Blue', color: '#0000ff' },
+    { name: 'Magenta', color: '#ff00ff' },
+    { name: 'Cyan', color: '#00ffff' },
+    { name: 'White', color: '#ffffff' },
+  ];
+  const SOUNDS = ['Bicycle bell', 'Bike horn', 'Ring bell', 'Car horn', 'Cartoon horn', 'Horn', 'Jingle bell', 'Squeaky toy', 'Car horn 2'];
+  const DIRS = ['Off', 'Left', 'Left top', 'Forward', 'Right top', 'Right', 'Back'];
+  const KM_TO_MI = 0.621371;
+
+  // ---------- saved state ----------
+  const DEFAULTS = { sound: 0, light: 0, accel: 0, presets: [0, 20, 40, 60, 80], unit: 'mi', top: 0 };
+  let state = load();
+  function load() {
+    try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('htboard') || '{}')); }
+    catch { return { ...DEFAULTS }; }
+  }
+  function save() { try { localStorage.setItem('htboard', JSON.stringify(state)); } catch {} }
+
+  // ---------- elements ----------
+  const $ = id => document.getElementById(id);
+  const logEl = $('log');
+  function log(msg) {
+    const t = new Date().toLocaleTimeString();
+    logEl.textContent = `${t}  ${msg}\n` + logEl.textContent.slice(0, 8000);
+  }
+  const hex = bytes => Array.from(bytes, b => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
+
+  // ---------- packet builder ----------
+  function buildPacket(direction = 0) {
+    const p = new Uint8Array(20);
+    p[0] = 0xAA; p[1] = 0x55; p[2] = 0x03; p[3] = 0x00;
+    p[4] = state.sound & 0xff;
+    p[5] = state.light & 0xff;
+    p[6] = state.light & 0xff;
+    p[7] = Math.round(state.accel / 2) & 0xff;   // app sends slider % divided by 2
+    p[8] = direction & 0xff;
+    p[16] = 0x85; p[17] = 0x14; p[18] = 0x00; p[19] = 0xFE;
+    return p;
+  }
+
+  // ---------- Bluetooth ----------
+  let device = null, writeChar = null, queue = Promise.resolve();
+
+  function setStatus(text, mode) {
+    $('statusText').textContent = text;
+    $('dot').className = 'dot' + (mode ? ' ' + mode : '');
+  }
+  function setConnected(on) {
+    $('controls').classList.toggle('locked', !on);
+    $('connectBtn').textContent = on ? 'Disconnect' : 'Connect to board';
+  }
+
+  function send(direction = 0) {
+    if (!writeChar) return;
+    const pkt = buildPacket(direction);
+    queue = queue.then(async () => {
+      try {
+        if (writeChar.properties.write) await writeChar.writeValueWithResponse(pkt);
+        else await writeChar.writeValueWithoutResponse(pkt);
+        log('SENT ' + hex(pkt));
+      } catch (e) { log('Send failed: ' + e.message); }
+    });
+  }
+
+  async function connect() {
+    try {
+      setStatus('Choose your board...', 'busy');
+      device = await navigator.bluetooth.requestDevice({
+        filters: [{ namePrefix: NAME_PREFIX }, { services: [SERVICE] }],
+        optionalServices: [SERVICE],
+      });
+      device.addEventListener('gattserverdisconnected', onDisconnect);
+      setStatus('Connecting...', 'busy');
+      const server = await device.gatt.connect();
+      const svc = await server.getPrimaryService(SERVICE);
+      writeChar = await svc.getCharacteristic(CHAR_WRITE);
+      const notify = await svc.getCharacteristic(CHAR_NOTIFY);
+      notify.addEventListener('characteristicvaluechanged', e => parse(new Uint8Array(e.target.value.buffer)));
+      await notify.startNotifications();
+      setStatus('Connected: ' + (device.name || 'board'), 'on');
+      setConnected(true);
+      log('Connected to ' + (device.name || device.id));
+    } catch (e) {
+      log('Connect failed: ' + e.message);
+      setStatus(e.name === 'NotFoundError' ? 'Not connected' : 'Connect failed', '');
+      writeChar = null;
+    }
+  }
+  function onDisconnect() {
+    writeChar = null;
+    setConnected(false);
+    setStatus('Disconnected', '');
+    log('Board disconnected');
+  }
+
+  // ---------- telemetry ----------
+  const u16 = (b, i) => b[i] | (b[i + 1] << 8);
+  function parse(b) {
+    if (b.length !== 20) { log('RECV (unknown) ' + hex(b)); return; }
+    if (b[16] === 0xA9) {
+      const kmh = u16(b, 4) / 100;
+      const odoKm = (u16(b, 6) * 65536 + u16(b, 8)) / 100;
+      showSpeed(kmh);
+      $('odo').textContent = dist(odoKm);
+    } else {
+      const tripKm = (u16(b, 2) * 65536 + u16(b, 4)) / 100;
+      const batt = b[12];
+      $('trip').textContent = dist(tripKm);
+      if (batt <= 100) {
+        $('battery').textContent = batt;
+        $('battBar').style.width = batt + '%';
+        $('battBar').style.background = batt < 20 ? 'var(--bad)' : batt < 40 ? 'var(--warn)' : 'var(--accent)';
+      }
+    }
+  }
+  const conv = km => state.unit === 'mi' ? km * KM_TO_MI : km;
+  const dist = km => conv(km).toFixed(1);
+  function showSpeed(kmh) {
+    $('speed').textContent = conv(kmh).toFixed(1);
+    if (kmh > state.top && kmh < 80) { state.top = kmh; save(); }
+    $('top').textContent = conv(state.top).toFixed(1);
+  }
+
+  // ---------- UI ----------
+  function renderUnits() {
+    $('unitMph').classList.toggle('sel', state.unit === 'mi');
+    $('unitKm').classList.toggle('sel', state.unit === 'km');
+    document.querySelectorAll('.unitSpeed').forEach(e => e.textContent = state.unit === 'mi' ? 'mph' : 'km/h');
+    document.querySelectorAll('.unitDist').forEach(e => e.textContent = state.unit === 'mi' ? 'mi' : 'km');
+    $('top').textContent = conv(state.top).toFixed(1);
+  }
+  $('unitMph').onclick = () => { state.unit = 'mi'; save(); renderUnits(); };
+  $('unitKm').onclick = () => { state.unit = 'km'; save(); renderUnits(); };
+  $('top').parentElement.title = 'Tap to reset';
+  $('top').parentElement.onclick = () => { if (confirm('Reset top speed?')) { state.top = 0; save(); renderUnits(); } };
+
+  function selectIn(container, idx) {
+    [...container.children].forEach((el, i) => el.classList.toggle('sel', i === idx));
+  }
+
+  // acceleration
+  const slider = $('accel');
+  function renderAccel() {
+    slider.value = state.accel;
+    $('accelVal').textContent = state.accel;
+    selectIn($('presets'), state.presets.indexOf(state.accel));
+  }
+  slider.oninput = () => { $('accelVal').textContent = slider.value; };
+  slider.onchange = () => { state.accel = +slider.value; save(); renderAccel(); send(); };
+
+  state.presets.forEach((v, i) => {
+    const b = document.createElement('button');
+    b.className = 'preset';
+    b.innerHTML = `<span>${i + 1}</span><small>${v}%</small>`;
+    let timer = null, held = false;
+    const start = () => { held = false; timer = setTimeout(() => {
+      held = true;
+      state.presets[i] = +slider.value; save();
+      b.querySelector('small').textContent = state.presets[i] + '%';
+      renderAccel();
+    }, 800); };
+    const end = () => clearTimeout(timer);
+    b.addEventListener('pointerdown', start);
+    b.addEventListener('pointerup', end);
+    b.addEventListener('pointerleave', end);
+    b.addEventListener('contextmenu', e => e.preventDefault());
+    b.onclick = () => { if (held) return; state.accel = state.presets[i]; save(); renderAccel(); send(); };
+    $('presets').appendChild(b);
+  });
+
+  // lights
+  LIGHTS.forEach((l, i) => {
+    const b = document.createElement('button');
+    b.className = 'swatch';
+    b.innerHTML = (l.color ? `<i style="background:${l.color}"></i>` : '') + l.name;
+    b.onclick = () => { state.light = i; save(); selectIn($('lights'), i); send(); };
+    $('lights').appendChild(b);
+  });
+
+  // sounds
+  SOUNDS.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.textContent = s;
+    b.style.fontSize = '14px';
+    b.onclick = () => { state.sound = i; save(); selectIn($('sounds'), i); send(); };
+    $('sounds').appendChild(b);
+  });
+
+  // directions (not saved; any other write resets to 0 like the original app)
+  DIRS.forEach((d, i) => {
+    const b = document.createElement('button');
+    b.textContent = d;
+    b.onclick = () => { selectIn($('dirs'), i); send(i); };
+    $('dirs').appendChild(b);
+  });
+
+  $('syncBtn').onclick = () => { send(); selectIn($('dirs'), 0); };
+  $('connectBtn').onclick = () => {
+    if (device && device.gatt.connected) device.gatt.disconnect();
+    else connect();
+  };
+
+  // init
+  renderUnits();
+  renderAccel();
+  selectIn($('lights'), state.light);
+  selectIn($('sounds'), state.sound);
+  if (!navigator.bluetooth) {
+    $('unsupported').style.display = 'block';
+    $('connectBtn').disabled = true;
+  }
+  // Any non-direction write clears the direction highlight
+  document.querySelectorAll('#lights button, #sounds button, #presets button').forEach(b =>
+    b.addEventListener('click', () => selectIn($('dirs'), 0)));
+  slider.addEventListener('change', () => selectIn($('dirs'), 0));
+})();
+</script>
+</body>
+</html>
