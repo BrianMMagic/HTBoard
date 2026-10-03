@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0e1116">
 <title>HT Board</title>
+<script>
+  (function () {
+    var t;
+    try { t = localStorage.getItem('htboard-theme'); } catch (e) {}
+    if (!t) t = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
 <style>
   :root {
     --bg: #0e1116;
@@ -17,6 +25,28 @@
     --accent-ink: #062b16;
     --warn: #ffb020;
     --bad: #ff5d5d;
+    --warn-bg: #2a2110;
+    --warn-line: #5a4614;
+    --warn-text: #ffd27a;
+    --log-bg: #0a0d11;
+    --log-text: #9fb3c8;
+  }
+  :root[data-theme="light"] {
+    --bg: #f3f5f8;
+    --card: #ffffff;
+    --card2: #eef1f5;
+    --line: #d5dbe3;
+    --text: #141a22;
+    --muted: #5d6877;
+    --accent: #14a85a;
+    --accent-ink: #ffffff;
+    --warn: #c77a00;
+    --bad: #d93636;
+    --warn-bg: #fff4dc;
+    --warn-line: #f0d08a;
+    --warn-text: #7a4b00;
+    --log-bg: #eef1f5;
+    --log-text: #33475b;
     --radius: 14px;
   }
   * { box-sizing: border-box; }
@@ -65,9 +95,9 @@
   .swatch { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; padding: 10px 4px; }
   .swatch i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; border: 1px solid #0005; }
   .note { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
-  .warn { background: #2a2110; border: 1px solid #5a4614; color: #ffd27a; border-radius: 10px; padding: 12px; font-size: 14px; margin-bottom: 14px; display: none; }
+  .warn { background: var(--warn-bg); border: 1px solid var(--warn-line); color: var(--warn-text); border-radius: 10px; padding: 12px; font-size: 14px; margin-bottom: 14px; display: none; }
   details summary { cursor: pointer; color: var(--muted); font-size: 14px; }
-  #log { font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: #9fb3c8; background: #0a0d11; border-radius: 8px; padding: 10px; max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin-top: 10px; }
+  #log { font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; color: var(--log-text); background: var(--log-bg); border-radius: 8px; padding: 10px; max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin-top: 10px; }
   .unit-toggle { display: flex; gap: 6px; }
   .unit-toggle button { padding: 6px 10px; min-height: 32px; font-size: 13px; }
   .locked { opacity: .45; pointer-events: none; }
@@ -83,6 +113,7 @@
   <div class="unit-toggle">
     <button id="unitMph">mph</button>
     <button id="unitKm">km</button>
+    <button id="themeBtn" aria-label="Switch light or dark mode">Light</button>
   </div>
 </header>
 
@@ -338,7 +369,22 @@
     else connect();
   };
 
+  // theme
+  const metaTheme = document.querySelector('meta[name=theme-color]');
+  function renderTheme() {
+    const t = document.documentElement.getAttribute('data-theme');
+    $('themeBtn').textContent = t === 'light' ? 'Dark' : 'Light';
+    metaTheme.setAttribute('content', t === 'light' ? '#f3f5f8' : '#0e1116');
+  }
+  $('themeBtn').onclick = () => {
+    const t = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+    try { localStorage.setItem('htboard-theme', t); } catch {}
+    renderTheme();
+  };
+
   // init
+  renderTheme();
   renderUnits();
   renderAccel();
   selectIn($('sounds'), state.sound);
