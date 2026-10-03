@@ -112,7 +112,10 @@
   :root[data-theme="dark"] .theme-switch .sun { color: var(--muted); }
   :root[data-theme="dark"] .theme-switch .moon { color: #ffd76a; }
   .theme-switch:active { transform: none; }
-  .locked { opacity: .45; pointer-events: none; }
+  .locked button, .locked input { pointer-events: none; }
+  .lock-hint { display: none; align-items: center; gap: 10px; background: var(--card2); border: 1px dashed var(--line); color: var(--text); border-radius: 10px; padding: 12px 14px; font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+  .lock-hint svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
+  .locked .lock-hint { display: flex; }
 </style>
 </head>
 <body>
@@ -145,6 +148,8 @@
 </div>
 
 <div id="controls" class="locked">
+
+  <div class="lock-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Connect to the board to change settings</div>
 
   <div class="card">
     <h2>Ride data</h2>
