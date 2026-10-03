@@ -14,7 +14,7 @@ Turn the board on, tap **Connect to board**, and pick the device named `BLE Devi
 
 ## What it does
 
-- Acceleration from 0 to 100%, with 5 presets (hold a preset to save the slider value to it)
+- Torque from 0 to 100% (controls both acceleration and braking strength), with 5 presets (hold a preset to save the slider value to it)
 - Board light color (off plus 7 colors)
 - Horn sound (9 choices)
 - Direction lights
@@ -44,7 +44,7 @@ AA 55 03 00 SS LL LL AA DD 00 00 00 00 00 00 00 85 14 00 FE
 | --- | --- |
 | 4 | Horn sound, 0 to 8 |
 | 5, 6 | Board light, 0 off, 1 red, 2 green, 3 yellow, 4 blue, 5 magenta, 6 cyan, 7 white |
-| 7 | Acceleration, slider percent divided by 2 (0 to 50) |
+| 7 | Torque, slider percent divided by 2 (0 to 50). Controls both acceleration and brake force. Lower is gentler. |
 | 8 | Direction light, 0 off, 1 left, 2 left top, 3 forward, 4 right top, 5 right, 6 back |
 
 Every command sends all settings at once. The original app only set byte 8 when you tapped a direction, so any other command turns direction lights off.
